@@ -11,6 +11,9 @@ MINDL := $(GO) tool codeberg.org/ntnn/mindl
 GOLANGCI_LINT_VERSION ?= 2.12.2
 GOLANGCI_LINT := $(TOOLS_DIR)/golangci-lint-$(GOLANGCI_LINT_VERSION)/golangci-lint
 
+CONTROLLER_GEN_VERSION ?= 0.19.0
+CONTROLLER_GEN := $(TOOLS_DIR)/controller-gen-$(CONTROLLER_GEN_VERSION)/controller-gen
+
 # kcp components
 KCP_VERSION ?= 0.32.0
 KCP_ASSETS_DIR := $(TOOLS_DIR)/kcp-$(KCP_VERSION)
@@ -45,11 +48,17 @@ test-integration: $(KCP) ## Integration tests against in-process sharded kcp (CI
 	TEST_KCP_ASSETS=$(KCP_ASSETS_DIR) $(GO) test -tags=integration ./test/...
 
 .PHONY: tools
-tools: $(GOLANGCI_LINT) $(KCP_BINARIES) ## Pull all pinned tool artefacts via mindl.
+tools: $(GOLANGCI_LINT) $(CONTROLLER_GEN) $(KCP_BINARIES) ## Pull all pinned tool artefacts via mindl.
 
 $(GOLANGCI_LINT):
 	mkdir -p $(dir $@)
 	$(MINDL) download -tool golangci-lint -out $@ -version $(GOLANGCI_LINT_VERSION)
+
+$(CONTROLLER_GEN):
+	mkdir -p $(dir $@)
+	$(MINDL) download -common -out $@ \
+		-url 'https://github.com/kubernetes-sigs/controller-tools/releases/download/v{{.Version}}/controller-gen-{{.OS}}-{{.Arch}}{{.Exe}}' \
+		-version $(CONTROLLER_GEN_VERSION)
 
 .PHONY: lint
 lint: $(GOLANGCI_LINT) ## Run golangci-lint over all modules.
@@ -60,8 +69,8 @@ tidy: ## go mod tidy all modules.
 	@set -e; for m in $(MODULES); do (cd $$m && $(GO) mod tidy); done
 
 .PHONY: codegen
-codegen: ## Regenerate deepcopy and other in-tree generated code.
-	hack/update-codegen.sh
+codegen: $(CONTROLLER_GEN) ## Regenerate deepcopy and other in-tree generated code.
+	CONTROLLER_GEN=$(CONTROLLER_GEN) hack/update-codegen.sh
 
 .PHONY: manifests
 manifests: ## Regenerate committed manifests into config/.
