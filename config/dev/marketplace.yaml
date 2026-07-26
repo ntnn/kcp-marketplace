@@ -49,8 +49,10 @@ spec:
             - name: https
               containerPort: 6444
           readinessProbe:
-            tcpSocket:
+            httpGet:
+              path: /readyz
               port: 6444
+              scheme: HTTPS
             initialDelaySeconds: 3
           volumeMounts:
             - name: serving
