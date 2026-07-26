@@ -1,6 +1,9 @@
 # compiled binaries
 /bin/
 
+# tools
+/hack/tools/
+
 # local kcp state
 .kcp/
 
