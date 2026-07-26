@@ -1,0 +1,55 @@
+# Minimal single-member etcd for the dev stack (no TLS, ephemeral storage).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: etcd
+  namespace: kcp
+  labels:
+    app: etcd
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: etcd
+  template:
+    metadata:
+      labels:
+        app: etcd
+    spec:
+      containers:
+        - name: etcd
+          image: quay.io/coreos/etcd:v3.5.28
+          command:
+            - /usr/local/bin/etcd
+            - --name=etcd-0
+            - --data-dir=/var/run/etcd/default.etcd
+            - --listen-client-urls=http://0.0.0.0:2379
+            - --advertise-client-urls=http://etcd.kcp.svc.cluster.local:2379
+            - --listen-peer-urls=http://0.0.0.0:2380
+          ports:
+            - name: client
+              containerPort: 2379
+            - name: peer
+              containerPort: 2380
+          volumeMounts:
+            - name: data
+              mountPath: /var/run/etcd
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: etcd
+  namespace: kcp
+spec:
+  selector:
+    app: etcd
+  ports:
+    - name: client
+      port: 2379
+      targetPort: 2379
+    - name: peer
+      port: 2380
+      targetPort: 2380

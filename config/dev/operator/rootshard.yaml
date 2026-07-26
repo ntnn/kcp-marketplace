@@ -1,0 +1,65 @@
+apiVersion: operator.kcp.io/v1alpha1
+kind: RootShard
+metadata:
+  name: root
+  namespace: kcp
+spec:
+  external:
+    hostname: kcp.127.0.0.1.nip.io
+    port: 8443
+  shardBaseURL: https://root.kcp.127.0.0.1.nip.io:8443
+  cache:
+    embedded:
+      enabled: true
+  certificates:
+    issuerRef:
+      group: cert-manager.io
+      kind: Issuer
+      name: selfsigned
+  etcd:
+    endpoints:
+      - http://etcd.kcp.svc.cluster.local:2379
+  extraArgs:
+    - --etcd-prefix=/shard/root
+  deploymentTemplate:
+    spec:
+      template:
+        spec:
+          hostAliases:
+            - ip: 10.96.2.2
+              hostnames:
+                - kcp.127.0.0.1.nip.io
+                - root.kcp.127.0.0.1.nip.io
+                - theseus.kcp.127.0.0.1.nip.io
+  proxy:
+    deploymentTemplate:
+      spec:
+        template:
+          spec:
+            hostAliases:
+              - ip: 10.96.2.2
+                hostnames:
+                  - kcp.127.0.0.1.nip.io
+                  - root.kcp.127.0.0.1.nip.io
+                  - theseus.kcp.127.0.0.1.nip.io
+  certificateTemplates:
+    server:
+      spec:
+        dnsNames:
+          - root.kcp.127.0.0.1.nip.io
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TLSRoute
+metadata:
+  name: root
+  namespace: kcp
+spec:
+  parentRefs:
+    - name: eg
+      namespace: envoy-gateway-system
+  hostnames:
+    - root.kcp.127.0.0.1.nip.io
+  rules:
+    - backendRefs:
+        - name: root-kcp
+          port: 6443
