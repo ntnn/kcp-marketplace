@@ -17,7 +17,7 @@ CONTROLLER_GEN := $(TOOLS_DIR)/controller-gen-$(CONTROLLER_GEN_VERSION)/controll
 # kcp components
 KCP_VERSION ?= 0.32.0
 KCP_ASSETS_DIR := $(TOOLS_DIR)/kcp-$(KCP_VERSION)
-KCP_COMPONENTS := kcp kcp-front-proxy cache-server
+KCP_COMPONENTS := kcp kcp-front-proxy cache-server sharded-test-server
 KCP_BINARIES := $(addprefix $(KCP_ASSETS_DIR)/,$(KCP_COMPONENTS))
 KCP := $(KCP_ASSETS_DIR)/kcp
 
@@ -43,9 +43,14 @@ build: ## Compile binaries into bin/.
 test: ## Unit tests, no cluster.
 	@set -e; for m in $(MODULES); do (cd $$m && $(GO) test ./...); done
 
-.PHONY: test-integration
-test-integration: $(KCP) ## Integration tests against in-process sharded kcp (CI gate).
-	TEST_KCP_ASSETS=$(KCP_ASSETS_DIR) $(GO) test -tags=integration ./test/...
+.PHONY: test-e2e
+test-e2e: $(KCP_BINARIES) ## Integration tests against in-process sharded kcp (CI gate).
+	KCP_ASSET_SHARDED_TEST_SERVER=$(KCP_ASSETS_DIR)/sharded-test-server \
+	KCP_ASSET_KCP=$(KCP_ASSETS_DIR)/kcp \
+	KCP_ASSET_KCP_FRONT_PROXY=$(KCP_ASSETS_DIR)/kcp-front-proxy \
+	KCP_ASSET_CACHE_SERVER=$(KCP_ASSETS_DIR)/cache-server \
+	NO_GORUN=1 \
+	$(GO) test -tags=e2e ./test/e2e/...
 
 .PHONY: tools
 tools: $(GOLANGCI_LINT) $(CONTROLLER_GEN) $(KCP_BINARIES) ## Pull all pinned tool artefacts via mindl.

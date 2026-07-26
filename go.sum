@@ -125,6 +125,8 @@ github.com/kcp-dev/logicalcluster/v3 v3.0.5 h1:JbYakokb+5Uinz09oTXomSUJVQsqfxEvU
 github.com/kcp-dev/logicalcluster/v3 v3.0.5/go.mod h1:EWBUBxdr49fUB1cLMO4nOdBWmYifLbP1LfoL20KkXYY=
 github.com/kcp-dev/multicluster-provider v0.8.1-0.20260714141811-833f063357f8 h1:IGFbH0CwjWYGocSWYYfrog46OYolS0L2nA0Ti86lEzg=
 github.com/kcp-dev/multicluster-provider v0.8.1-0.20260714141811-833f063357f8/go.mod h1:7LkQot2Ljmsv1w5ZjfHpjVEbQwtFQiA6LAWHbiHCGUI=
+github.com/kcp-dev/multicluster-provider/client v0.8.1-0.20260714141811-833f063357f8 h1:zwlGpx3IfUy1yeBZGPHmaEg8SPVnXJ+OobkBfD0eal8=
+github.com/kcp-dev/multicluster-provider/client v0.8.1-0.20260714141811-833f063357f8/go.mod h1:kK9CSLmECoRiOU+xKOhIE4tHpQBcBbBvWOgKORC/eqI=
 github.com/kcp-dev/sdk v0.32.0 h1:H7BPHf/aZbdw/DbYLQX3Nu3lGeR5bmqOsmbt8KyqKRY=
 github.com/kcp-dev/sdk v0.32.0/go.mod h1:H6SCvNS25sReJ61YDy6OPEmngTUFP7/CY0fRM576FM4=
 github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI2bnpBCr8=
