@@ -1,0 +1,46 @@
+apiVersion: operator.kcp.io/v1alpha1
+kind: Shard
+metadata:
+  name: theseus
+  namespace: kcp
+spec:
+  rootShard:
+    ref:
+      name: root
+  shardBaseURL: https://theseus.kcp.127.0.0.1.nip.io:8443
+  etcd:
+    endpoints:
+      - http://etcd.kcp.svc.cluster.local:2379
+  extraArgs:
+    - --etcd-prefix=/shard/theseus
+  deploymentTemplate:
+    spec:
+      template:
+        spec:
+          hostAliases:
+            - ip: 10.96.2.2
+              hostnames:
+                - kcp.127.0.0.1.nip.io
+                - root.kcp.127.0.0.1.nip.io
+                - theseus.kcp.127.0.0.1.nip.io
+  certificateTemplates:
+    server:
+      spec:
+        dnsNames:
+          - theseus.kcp.127.0.0.1.nip.io
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TLSRoute
+metadata:
+  name: theseus
+  namespace: kcp
+spec:
+  parentRefs:
+    - name: eg
+      namespace: envoy-gateway-system
+  hostnames:
+    - theseus.kcp.127.0.0.1.nip.io
+  rules:
+    - backendRefs:
+        - name: theseus-shard-kcp
+          port: 6443

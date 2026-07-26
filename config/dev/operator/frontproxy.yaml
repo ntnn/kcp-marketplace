@@ -1,0 +1,66 @@
+apiVersion: operator.kcp.io/v1alpha1
+kind: FrontProxy
+metadata:
+  name: frontproxy
+  namespace: kcp
+spec:
+  rootShard:
+    ref:
+      name: root
+  external:
+    hostname: kcp.127.0.0.1.nip.io
+    port: 8443
+  additionalPathMappings:
+    - path: /services/marketplace/
+      backend: https://marketplace-vws.kcp.svc:6444
+      backend_server_ca: /etc/kcp/tls/ca/tls.crt
+      proxy_client_cert: /etc/kcp-front-proxy/requestheader-client/tls.crt
+      proxy_client_key: /etc/kcp-front-proxy/requestheader-client/tls.key
+  deploymentTemplate:
+    spec:
+      template:
+        spec:
+          hostAliases:
+            - ip: 10.96.2.2
+              hostnames:
+                - kcp.127.0.0.1.nip.io
+                - root.kcp.127.0.0.1.nip.io
+                - theseus.kcp.127.0.0.1.nip.io
+  certificateTemplates:
+    server:
+      spec:
+        dnsNames:
+          - kcp.127.0.0.1.nip.io
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TLSRoute
+metadata:
+  name: frontproxy
+  namespace: kcp
+spec:
+  parentRefs:
+    - name: eg
+      namespace: envoy-gateway-system
+  hostnames:
+    - kcp.127.0.0.1.nip.io
+  rules:
+    - backendRefs:
+        - name: frontproxy-front-proxy
+          port: 8443
+---
+apiVersion: operator.kcp.io/v1alpha1
+kind: Kubeconfig
+metadata:
+  name: frontproxy
+  namespace: kcp
+spec:
+  username: kcp-admin
+  groups:
+    - system:masters
+    - system:kcp:admin
+  validity: 8766h
+  secretRef:
+    name: kcp-frontproxy-kubeconfig
+  target:
+    frontProxyRef:
+      name: frontproxy

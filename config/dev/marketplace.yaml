@@ -1,0 +1,89 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: marketplace-vws-serving
+  namespace: kcp
+spec:
+  secretName: marketplace-vws-serving-cert
+  issuerRef:
+    name: root-server-ca
+    kind: Issuer
+  usages:
+    - server auth
+  dnsNames:
+    - marketplace-vws
+    - marketplace-vws.kcp
+    - marketplace-vws.kcp.svc
+    - marketplace-vws.kcp.svc.cluster.local
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: marketplace-vws
+  namespace: kcp
+  labels:
+    app: marketplace-vws
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: marketplace-vws
+  template:
+    metadata:
+      labels:
+        app: marketplace-vws
+    spec:
+      containers:
+        - name: vws
+          image: kcp-marketplace-vws:dev
+          imagePullPolicy: IfNotPresent
+          args:
+            - --secure-port=6444
+            - --bind-address=0.0.0.0
+            - --tls-cert-file=/etc/serving/tls.crt
+            - --tls-private-key-file=/etc/serving/tls.key
+            - --requestheader-client-ca-file=/etc/requestheader-ca/tls.crt
+            - --shard-kubeconfig=/etc/shard-kubeconfig/kubeconfig
+            - --gateway-url=https://eg-nodeport.envoy-gateway-system.svc.cluster.local:8443
+          ports:
+            - name: https
+              containerPort: 6444
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 6444
+              scheme: HTTPS
+            initialDelaySeconds: 3
+          volumeMounts:
+            - name: serving
+              mountPath: /etc/serving
+              readOnly: true
+            - name: requestheader-ca
+              mountPath: /etc/requestheader-ca
+              readOnly: true
+            - name: shard-kubeconfig
+              mountPath: /etc/shard-kubeconfig
+              readOnly: true
+      volumes:
+        - name: serving
+          secret:
+            secretName: marketplace-vws-serving-cert
+        - name: requestheader-ca
+          secret:
+            secretName: root-requestheader-client-ca
+        - name: shard-kubeconfig
+          secret:
+            secretName: kcp-frontproxy-kubeconfig
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: marketplace-vws
+  namespace: kcp
+spec:
+  selector:
+    app: marketplace-vws
+  ports:
+    - name: https
+      port: 6444
+      targetPort: 6444
