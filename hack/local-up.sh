@@ -62,15 +62,13 @@ wait_deploy "${NS}" theseus-shard-kcp
 wait_deploy "${NS}" frontproxy-front-proxy
 
 echo ">>> [6/8] build vws image + load into kind"
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/access-vws ./cmd/access-vws
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/apiexport-vws ./cmd/apiexport-vws
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/marketplace-vws ./cmd/marketplace-vws
 docker build -f config/dev/Dockerfile -t "${IMG}" .
 kind load docker-image "${IMG}" --name "${CLUSTER}"
 
 echo ">>> [7/8] marketplace virtual workspaces"
 kubectl apply -f config/dev/marketplace.yaml
-wait_deploy "${NS}" marketplace-access-vws
-wait_deploy "${NS}" marketplace-apiexport-vws
+wait_deploy "${NS}" marketplace-vws
 # The front-proxy loads the mapping file at startup; ensure the current mappings
 # (and VW backends) are live.
 kubectl -n "${NS}" rollout restart deploy/frontproxy-front-proxy
@@ -94,8 +92,8 @@ Stack is up (kcp-operator, 2 shards + front-proxy via envoy gateway).
   theseus shard: https://theseus.kcp.127.0.0.1.nip.io:8443
 
   export KUBECONFIG=${KUBECONFIG_OUT}
-  kubectl get --raw '/services/marketplace-access/apis/marketplace.kcp.io/v1alpha1/accessibleworkspaces' | jq
-  kubectl get --raw '/services/marketplace-apiexports/apis/marketplace.kcp.io/v1alpha1/bindableapiexports' | jq
+  kubectl get --raw '/services/marketplace/apis/marketplace.kcp.io/v1alpha1/accessibleworkspaces' | jq
+  kubectl get --raw '/services/marketplace/apis/marketplace.kcp.io/v1alpha1/bindableapiexports' | jq
 
 Tear down with: make down
 EOF

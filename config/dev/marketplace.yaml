@@ -1,69 +1,48 @@
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: marketplace-access-vws-serving
+  name: marketplace-vws-serving
   namespace: kcp
 spec:
-  secretName: marketplace-access-vws-serving-cert
+  secretName: marketplace-vws-serving-cert
   issuerRef:
     name: root-server-ca
     kind: Issuer
   usages:
     - server auth
   dnsNames:
-    - marketplace-access-vws
-    - marketplace-access-vws.kcp
-    - marketplace-access-vws.kcp.svc
-    - marketplace-access-vws.kcp.svc.cluster.local
----
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  name: marketplace-apiexport-vws-serving
-  namespace: kcp
-spec:
-  secretName: marketplace-apiexport-vws-serving-cert
-  issuerRef:
-    name: root-server-ca
-    kind: Issuer
-  usages:
-    - server auth
-  dnsNames:
-    - marketplace-apiexport-vws
-    - marketplace-apiexport-vws.kcp
-    - marketplace-apiexport-vws.kcp.svc
-    - marketplace-apiexport-vws.kcp.svc.cluster.local
+    - marketplace-vws
+    - marketplace-vws.kcp
+    - marketplace-vws.kcp.svc
+    - marketplace-vws.kcp.svc.cluster.local
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: marketplace-access-vws
+  name: marketplace-vws
   namespace: kcp
   labels:
-    app: marketplace-access-vws
+    app: marketplace-vws
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: marketplace-access-vws
+      app: marketplace-vws
   template:
     metadata:
       labels:
-        app: marketplace-access-vws
+        app: marketplace-vws
     spec:
       containers:
         - name: vws
           image: kcp-marketplace-vws:dev
           imagePullPolicy: IfNotPresent
-          command:
-            - /usr/local/bin/access-vws
           args:
             - --secure-port=6444
             - --bind-address=0.0.0.0
             - --tls-cert-file=/etc/serving/tls.crt
             - --tls-private-key-file=/etc/serving/tls.key
             - --requestheader-client-ca-file=/etc/requestheader-ca/tls.crt
-            - --path-prefix=/services/marketplace-access
           ports:
             - name: https
               containerPort: 6444
@@ -81,7 +60,7 @@ spec:
       volumes:
         - name: serving
           secret:
-            secretName: marketplace-access-vws-serving-cert
+            secretName: marketplace-vws-serving-cert
         - name: requestheader-ca
           secret:
             secretName: root-requestheader-client-ca
@@ -89,76 +68,11 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: marketplace-access-vws
+  name: marketplace-vws
   namespace: kcp
 spec:
   selector:
-    app: marketplace-access-vws
-  ports:
-    - name: https
-      port: 6444
-      targetPort: 6444
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: marketplace-apiexport-vws
-  namespace: kcp
-  labels:
-    app: marketplace-apiexport-vws
-spec:
-  replicas: 1
-  selector:
-    matchLabels:
-      app: marketplace-apiexport-vws
-  template:
-    metadata:
-      labels:
-        app: marketplace-apiexport-vws
-    spec:
-      containers:
-        - name: vws
-          image: kcp-marketplace-vws:dev
-          imagePullPolicy: IfNotPresent
-          command:
-            - /usr/local/bin/apiexport-vws
-          args:
-            - --secure-port=6444
-            - --bind-address=0.0.0.0
-            - --tls-cert-file=/etc/serving/tls.crt
-            - --tls-private-key-file=/etc/serving/tls.key
-            - --requestheader-client-ca-file=/etc/requestheader-ca/tls.crt
-            - --path-prefix=/services/marketplace-apiexports
-          ports:
-            - name: https
-              containerPort: 6444
-          readinessProbe:
-            tcpSocket:
-              port: 6444
-            initialDelaySeconds: 3
-          volumeMounts:
-            - name: serving
-              mountPath: /etc/serving
-              readOnly: true
-            - name: requestheader-ca
-              mountPath: /etc/requestheader-ca
-              readOnly: true
-      volumes:
-        - name: serving
-          secret:
-            secretName: marketplace-apiexport-vws-serving-cert
-        - name: requestheader-ca
-          secret:
-            secretName: root-requestheader-client-ca
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: marketplace-apiexport-vws
-  namespace: kcp
-spec:
-  selector:
-    app: marketplace-apiexport-vws
+    app: marketplace-vws
   ports:
     - name: https
       port: 6444

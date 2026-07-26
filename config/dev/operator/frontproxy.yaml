@@ -11,13 +11,8 @@ spec:
     hostname: kcp.127.0.0.1.nip.io
     port: 8443
   additionalPathMappings:
-    - path: /services/marketplace-access/
-      backend: https://marketplace-access-vws.kcp.svc:6444
-      backend_server_ca: /etc/kcp/tls/ca/tls.crt
-      proxy_client_cert: /etc/kcp-front-proxy/requestheader-client/tls.crt
-      proxy_client_key: /etc/kcp-front-proxy/requestheader-client/tls.key
-    - path: /services/marketplace-apiexports/
-      backend: https://marketplace-apiexport-vws.kcp.svc:6444
+    - path: /services/marketplace/
+      backend: https://marketplace-vws.kcp.svc:6444
       backend_server_ca: /etc/kcp/tls/ca/tls.crt
       proxy_client_cert: /etc/kcp-front-proxy/requestheader-client/tls.crt
       proxy_client_key: /etc/kcp-front-proxy/requestheader-client/tls.key
