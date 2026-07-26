@@ -43,6 +43,8 @@ spec:
             - --tls-cert-file=/etc/serving/tls.crt
             - --tls-private-key-file=/etc/serving/tls.key
             - --requestheader-client-ca-file=/etc/requestheader-ca/tls.crt
+            - --shard-kubeconfig=/etc/shard-kubeconfig/kubeconfig
+            - --gateway-url=https://eg-nodeport.envoy-gateway-system.svc.cluster.local:8443
           ports:
             - name: https
               containerPort: 6444
@@ -57,6 +59,9 @@ spec:
             - name: requestheader-ca
               mountPath: /etc/requestheader-ca
               readOnly: true
+            - name: shard-kubeconfig
+              mountPath: /etc/shard-kubeconfig
+              readOnly: true
       volumes:
         - name: serving
           secret:
@@ -64,6 +69,9 @@ spec:
         - name: requestheader-ca
           secret:
             secretName: root-requestheader-client-ca
+        - name: shard-kubeconfig
+          secret:
+            secretName: kcp-frontproxy-kubeconfig
 ---
 apiVersion: v1
 kind: Service
