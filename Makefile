@@ -37,8 +37,7 @@ all: lint test build
 
 .PHONY: build
 build: ## Compile binaries into bin/.
-	$(GO) build -o $(GOBIN)/access-vws ./cmd/access-vws
-	$(GO) build -o $(GOBIN)/apiexport-vws ./cmd/apiexport-vws
+	$(GO) build -o $(GOBIN)/marketplace-vws ./cmd/marketplace-vws
 
 .PHONY: test
 test: ## Unit tests, no cluster.
