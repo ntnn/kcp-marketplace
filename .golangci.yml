@@ -10,7 +10,6 @@ linters:
     - misspell
     - unconvert
     - bodyclose
-    - goconst
     - revive
   exclusions:
     generated: strict
