@@ -1,0 +1,13 @@
+# compiled binaries
+/bin/
+
+# local kcp state
+.kcp/
+
+# ui
+ui/node_modules/
+ui/dist/
+
+# editor / os
+*.swp
+.DS_Store
