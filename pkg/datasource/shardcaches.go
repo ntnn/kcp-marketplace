@@ -7,6 +7,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
+	"k8s.io/klog/v2"
 	ctrlcache "sigs.k8s.io/controller-runtime/pkg/cache"
 
 	mcpcache "github.com/kcp-dev/multicluster-provider/pkg/cache"
@@ -91,6 +92,7 @@ func (s *ShardCaches) ensure(ctx context.Context, id string, cfg *rest.Config) e
 	s.agg.AddCache(id, wc)
 	s.active[id] = cancel
 	s.firstSynced = true
+	klog.FromContext(base).V(2).Info("shard cache synced", "shard", id)
 	return nil
 }
 
@@ -102,6 +104,7 @@ func (s *ShardCaches) remove(id string) {
 		s.agg.RemoveCache(id)
 		cancel()
 		delete(s.active, id)
+		klog.V(2).InfoS("shard cache removed", "shard", id)
 	}
 }
 

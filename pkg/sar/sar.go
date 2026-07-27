@@ -13,6 +13,7 @@ import (
 	authzv1 "k8s.io/api/authorization/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
+	"k8s.io/klog/v2"
 
 	kcpkubernetesclientset "github.com/kcp-dev/client-go/kubernetes"
 )
@@ -79,6 +80,7 @@ func (c *Checker) review(ctx context.Context, u user.Info, cluster string, spec 
 
 	key := cacheKey(cluster, spec)
 	if allowed, ok := c.get(key); ok {
+		klog.FromContext(ctx).V(4).Info("SAR cache hit", "user", spec.User, "cluster", cluster, "allowed", allowed)
 		return allowed, nil
 	}
 
@@ -89,6 +91,7 @@ func (c *Checker) review(ctx context.Context, u user.Info, cluster string, spec 
 		return false, fmt.Errorf("subjectaccessreview in cluster %q: %w", cluster, err)
 	}
 	c.put(key, res.Status.Allowed)
+	klog.FromContext(ctx).V(4).Info("SAR decided", "user", spec.User, "cluster", cluster, "allowed", res.Status.Allowed)
 	return res.Status.Allowed, nil
 }
 

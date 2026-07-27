@@ -23,6 +23,7 @@ import (
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
+	ctrl "sigs.k8s.io/controller-runtime"
 
 	kcpkubernetesclientset "github.com/kcp-dev/client-go/kubernetes"
 
@@ -68,6 +69,8 @@ func run() error {
 	}
 
 	ctx := genericapiserver.SetupSignalContext()
+
+	ctrl.SetLogger(klog.Background())
 
 	mgr, ds, checker, err := buildDatasource(shardKubeconfig, gatewayURL)
 	if err != nil {
