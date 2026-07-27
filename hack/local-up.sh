@@ -29,6 +29,7 @@ wait_deploy() { # namespace, name
 
 echo ">>> [1/8] kind cluster"
 if ! kind get clusters 2>/dev/null | grep -qx "${CLUSTER}"; then
+	mkdir -p .kcp/dex
 	kind create cluster --config config/dev/kind.yaml
 fi
 kubectl config use-context "kind-${CLUSTER}" >/dev/null

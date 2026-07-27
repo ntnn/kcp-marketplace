@@ -20,7 +20,9 @@ data:
   config.yaml: |
     issuer: https://dex.127.0.0.1.nip.io:8443
     storage:
-      type: memory
+      type: sqlite3
+      config:
+        file: /var/dex/dex.db
     web:
       https: 0.0.0.0:5556
       tlsCert: /etc/dex/tls/tls.crt
@@ -37,6 +39,8 @@ data:
         redirectURIs:
           - http://localhost:5173/callback
           - http://127.0.0.1:5173/callback
+          - http://localhost:5173/silent
+          - http://127.0.0.1:5173/silent
     enablePasswordDB: true
     staticPasswords:
       # password: "password" for all demo users
@@ -60,6 +64,10 @@ metadata:
   namespace: kcp
 spec:
   replicas: 1
+  strategy:
+    # dex keys are persisted in sqlite in a mounted dir; since sqlite is
+    # single-writer the migration strategy cannot be rolling
+    type: Recreate
   selector:
     matchLabels:
       app: dex
@@ -68,6 +76,14 @@ spec:
       labels:
         app: dex
     spec:
+      initContainers:
+        # fix permissions for the mounted directory
+        - name: fix-perms
+          image: busybox:1.37
+          command: ["sh", "-c", "chmod 0777 /var/dex"]
+          volumeMounts:
+            - name: data
+              mountPath: /var/dex
       containers:
         - name: dex
           image: ghcr.io/dexidp/dex:v2.41.1
@@ -88,7 +104,13 @@ spec:
             - name: tls
               mountPath: /etc/dex/tls
               readOnly: true
+            - name: data
+              mountPath: /var/dex
       volumes:
+        - name: data
+          hostPath:
+            path: /dex-data
+            type: DirectoryOrCreate
         - name: config
           configMap:
             name: dex
