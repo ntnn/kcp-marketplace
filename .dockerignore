@@ -1,0 +1,8 @@
+.git
+bin
+ui
+.kcp
+hack/tools
+transport-archive
+test
+*.md

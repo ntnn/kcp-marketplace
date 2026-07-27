@@ -8,6 +8,12 @@ MODULES := . ./apis
 TOOLS_DIR := $(CURDIR)/hack/tools
 MINDL := $(GO) tool codeberg.org/ntnn/mindl
 
+VERSION ?= $(shell git describe --tags --abbrev=0 --match 'v*')
+COMMIT ?= $(shell git rev-parse --short HEAD)
+REGISTRY ?= ghcr.io/ntnn/kcp-marketplace
+VWS_IMG ?= $(REGISTRY)/marketplace-vws:$(VERSION)
+UI_IMG ?= $(REGISTRY)/ui:$(VERSION)
+
 GOLANGCI_LINT_VERSION ?= 2.12.2
 GOLANGCI_LINT := $(TOOLS_DIR)/golangci-lint-$(GOLANGCI_LINT_VERSION)/golangci-lint
 
@@ -88,6 +94,22 @@ ui: ## Build the SPA.
 .PHONY: test-ui-e2e
 test-ui-e2e: ## Run playwright tests against dev.
 	cd ui && npm ci && npm run test:e2e:live
+
+.PHONY: docker-build-vws
+docker-build-vws: ## Build the marketplace-vws image.
+	docker build -f cmd/marketplace-vws/Dockerfile --build-arg VERSION=$(VERSION) -t $(VWS_IMG) .
+
+.PHONY: docker-build-ui
+docker-build-ui: ## Build the ui image.
+	docker build -t $(UI_IMG) ui
+
+.PHONY: docker-build
+docker-build: docker-build-vws docker-build-ui ## Build both production images.
+
+.PHONY: docker-push
+docker-push: ## Push both production images.
+	docker push $(VWS_IMG)
+	docker push $(UI_IMG)
 
 .PHONY: up
 up: ## Stand up the full kind stack for hands-on testing.
