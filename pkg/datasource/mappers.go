@@ -63,12 +63,22 @@ func mapAPIExports(list *apisv1alpha2.APIExportList) []APIExport {
 		for _, r := range item.Spec.Resources {
 			resources = append(resources, Resource{Group: r.Group, Resource: r.Name})
 		}
+		var claims []PermissionClaim
+		for _, c := range item.Spec.PermissionClaims {
+			claims = append(claims, PermissionClaim{
+				Group:        c.Group,
+				Resource:     c.Resource,
+				Verbs:        c.Verbs,
+				IdentityHash: c.IdentityHash,
+			})
+		}
 		byKey[path+"/"+item.Name] = APIExport{
-			Path:         path,
-			Cluster:      cluster,
-			Name:         item.Name,
-			IdentityHash: item.Status.IdentityHash,
-			Resources:    resources,
+			Path:             path,
+			Cluster:          cluster,
+			Name:             item.Name,
+			IdentityHash:     item.Status.IdentityHash,
+			Resources:        resources,
+			PermissionClaims: claims,
 		}
 	}
 

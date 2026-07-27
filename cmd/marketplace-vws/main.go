@@ -251,11 +251,17 @@ func listBindableAPIExports(ds datasource.Interface, checker sar.Interface) apis
 			for _, r := range a.Resources {
 				resources = append(resources, marketplacev1alpha1.BindableResource{Group: r.Group, Resource: r.Resource})
 			}
+			var claims []marketplacev1alpha1.BindablePermissionClaim
+			for _, c := range a.PermissionClaims {
+				claims = append(claims, marketplacev1alpha1.BindablePermissionClaim{
+					Group: c.Group, Resource: c.Resource, Verbs: c.Verbs, IdentityHash: c.IdentityHash,
+				})
+			}
 			list.Items = append(list.Items, marketplacev1alpha1.BindableAPIExport{
 				ObjectMeta: metav1.ObjectMeta{Name: a.Name},
 				Spec: marketplacev1alpha1.BindableAPIExportSpec{
 					Path: a.Path, Cluster: a.Cluster, ExportName: a.Name,
-					IdentityHash: a.IdentityHash, Resources: resources,
+					IdentityHash: a.IdentityHash, Resources: resources, PermissionClaims: claims,
 				},
 			})
 		}

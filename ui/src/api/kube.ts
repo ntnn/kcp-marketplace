@@ -178,6 +178,15 @@ export async function createAPIBinding(
 ): Promise<KubeObject> {
   const base = clusterBase(workspacePath)
   const name = bindingName || exp.exportName
+  // Accept every permission claim the export requests (matchAll scope).
+  const permissionClaims = (exp.permissionClaims ?? []).map((c) => ({
+    group: c.group,
+    resource: c.resource,
+    verbs: c.verbs,
+    identityHash: c.identityHash,
+    selector: { matchAll: true },
+    state: 'Accepted',
+  }))
   const body = {
     apiVersion: 'apis.kcp.io/v1alpha2',
     kind: 'APIBinding',
@@ -186,6 +195,7 @@ export async function createAPIBinding(
       reference: {
         export: { path: exp.path, name: exp.exportName },
       },
+      permissionClaims,
     },
   }
   return request<KubeObject>(`${base}/apis/apis.kcp.io/v1alpha2/apibindings`, {

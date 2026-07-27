@@ -17,6 +17,14 @@ type Resource struct {
 	Resource string
 }
 
+// PermissionClaim is a permission an APIExport requests from binding workspaces.
+type PermissionClaim struct {
+	Group        string
+	Resource     string
+	Verbs        []string
+	IdentityHash string
+}
+
 // APIExport is a bindable APIExport.
 type APIExport struct {
 	// Path is the workspace path hosting the APIExport.
@@ -29,6 +37,8 @@ type APIExport struct {
 	IdentityHash string
 	// Resources are the resources the APIExport serves.
 	Resources []Resource
+	// PermissionClaims are the permission claims the APIExport requests.
+	PermissionClaims []PermissionClaim
 }
 
 // Interface is the read side consumed by the REST storage. Returned slices are

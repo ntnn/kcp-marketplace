@@ -74,3 +74,17 @@ func TestMapAPIExports(t *testing.T) {
 	assert.Equal(t, "root:team-a", axs[1].Path)
 	assert.Equal(t, "widgets.example.io", axs[1].Name)
 }
+
+func TestMapAPIExportsPermissionClaims(t *testing.T) {
+	e := export("acl", "root:team-a", "widgets.example.io")
+	e.Spec.PermissionClaims = []apisv1alpha2.PermissionClaim{{
+		GroupResource: apisv1alpha2.GroupResource{Group: "", Resource: "configmaps"},
+		Verbs:         []string{"get", "list"},
+		IdentityHash:  "abc",
+	}}
+	axs := mapAPIExports(&apisv1alpha2.APIExportList{Items: []apisv1alpha2.APIExport{e}})
+	require.Len(t, axs, 1)
+	assert.Equal(t, []PermissionClaim{{
+		Group: "", Resource: "configmaps", Verbs: []string{"get", "list"}, IdentityHash: "abc",
+	}}, axs[0].PermissionClaims)
+}

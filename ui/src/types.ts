@@ -13,12 +13,20 @@ export interface BindableResource {
   resource: string
 }
 
+export interface PermissionClaim {
+  group: string
+  resource: string
+  verbs: string[]
+  identityHash: string
+}
+
 export interface BindableAPIExport {
   cluster: string
   path: string
   exportName: string
   identityHash: string
   resources: BindableResource[]
+  permissionClaims: PermissionClaim[]
 }
 
 // A generic Kubernetes-like object as returned by list endpoints.

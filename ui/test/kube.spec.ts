@@ -65,7 +65,7 @@ describe('kube api', () => {
     })
   })
 
-  it('createAPIBinding references the export by path+name', async () => {
+  it('createAPIBinding references the export by path+name and accepts all claims', async () => {
     vi.mocked(request).mockResolvedValue({})
     const exp: BindableAPIExport = {
       path: 'root',
@@ -73,6 +73,9 @@ describe('kube api', () => {
       exportName: 'widgets.example.io',
       identityHash: '',
       resources: [],
+      permissionClaims: [
+        { group: '', resource: 'configmaps', verbs: ['get', 'list'], identityHash: 'abc' },
+      ],
     }
     await createAPIBinding('root:team-a', exp)
     const [path, init] = vi.mocked(request).mock.calls[0]
@@ -80,6 +83,16 @@ describe('kube api', () => {
     const body = JSON.parse((init as RequestInit).body as string)
     expect(body.spec.reference.export).toEqual({ path: 'root', name: 'widgets.example.io' })
     expect(body.metadata.name).toBe('widgets.example.io')
+    expect(body.spec.permissionClaims).toEqual([
+      {
+        group: '',
+        resource: 'configmaps',
+        verbs: ['get', 'list'],
+        identityHash: 'abc',
+        selector: { matchAll: true },
+        state: 'Accepted',
+      },
+    ])
   })
 
   it('getObjectYaml requests the object with a namespace segment when namespaced', async () => {

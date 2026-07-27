@@ -77,14 +77,31 @@ export async function installMock(page: Page, opts: MockOptions = {}): Promise<v
 }
 
 function exportItems() {
-  const mk = (path: string, name: string, resources: { group: string; resource: string }[] = []) => ({
+  const mk = (
+    path: string,
+    name: string,
+    resources: { group: string; resource: string }[] = [],
+    permissionClaims: { group: string; resource: string; verbs: string[]; identityHash: string }[] = [],
+  ) => ({
     metadata: { name },
-    spec: { path, cluster: path.replace(/[:]/g, '-'), exportName: name, identityHash: 'hash', resources },
+    spec: {
+      path,
+      cluster: path.replace(/[:]/g, '-'),
+      exportName: name,
+      identityHash: 'hash',
+      resources,
+      permissionClaims,
+    },
   })
   return [
     mk('root', 'tenancy.kcp.io', [{ group: 'tenancy.kcp.io', resource: 'workspaces' }]),
     mk('root', 'topology.kcp.io', [{ group: 'topology.kcp.io', resource: 'partitions' }]),
-    mk('root:alpha', 'widgets.example.io', [{ group: 'example.io', resource: 'widgets' }]),
+    mk(
+      'root:alpha',
+      'widgets.example.io',
+      [{ group: 'example.io', resource: 'widgets' }],
+      [{ group: '', resource: 'configmaps', verbs: ['get', 'list'], identityHash: 'abc' }],
+    ),
     mk('root:beta', 'gadgets.example.io', [{ group: 'example.io', resource: 'gadgets' }]),
   ]
 }

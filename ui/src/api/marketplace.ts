@@ -4,6 +4,7 @@ import type {
   BindableAPIExport,
   BindableResource,
   KubeList,
+  PermissionClaim,
 } from '@/types'
 
 const GROUP = 'marketplace.kcp.io/v1alpha1'
@@ -22,6 +23,7 @@ interface RawExport {
     exportName?: string
     identityHash?: string
     resources?: BindableResource[]
+    permissionClaims?: PermissionClaim[]
   }
 }
 
@@ -41,5 +43,6 @@ export async function listBindableAPIExports(): Promise<BindableAPIExport[]> {
     exportName: e.spec?.exportName ?? e.metadata?.name ?? '',
     identityHash: e.spec?.identityHash ?? '',
     resources: e.spec?.resources ?? [],
+    permissionClaims: e.spec?.permissionClaims ?? [],
   }))
 }

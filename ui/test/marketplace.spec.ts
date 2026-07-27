@@ -29,6 +29,7 @@ describe('marketplace api mapping', () => {
             exportName: 'widgets.example.io',
             identityHash: 'deadbeef',
             resources: [{ group: 'example.io', resource: 'widgets' }],
+            permissionClaims: [{ group: '', resource: 'configmaps', verbs: ['get'], identityHash: 'h' }],
           },
         },
       ],
@@ -40,6 +41,7 @@ describe('marketplace api mapping', () => {
       exportName: 'widgets.example.io',
       identityHash: 'deadbeef',
       resources: [{ group: 'example.io', resource: 'widgets' }],
+      permissionClaims: [{ group: '', resource: 'configmaps', verbs: ['get'], identityHash: 'h' }],
     })
   })
 })
