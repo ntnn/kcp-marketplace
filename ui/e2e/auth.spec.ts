@@ -18,4 +18,13 @@ test.describe('auth', () => {
     await page.getByTestId('signin').click()
     await expect(page.getByTestId('cert-hint')).toBeVisible()
   })
+
+  test('does not show workspaces for an expired session', async ({ page, mock }) => {
+    test.skip(LIVE, 'mocked-only')
+    // No real IdP to renew against; keep the app from navigating away.
+    await page.route(/dex\.test|\.well-known|\/auth\b/, (r) => r.abort())
+    await mock({ authExpired: true })
+    await page.goto('/workspaces')
+    await expect(page.getByTestId('ws-row')).toHaveCount(0)
+  })
 })

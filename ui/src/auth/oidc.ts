@@ -14,6 +14,7 @@ export function userManager(): UserManager {
     authority: cfg.issuer,
     client_id: cfg.clientId,
     redirect_uri: `${origin}/callback`,
+    silent_redirect_uri: `${origin}/silent`,
     post_logout_redirect_uri: origin,
     response_type: 'code',
     scope: cfg.scope,
@@ -29,6 +30,20 @@ export async function login(targetPath?: string): Promise<void> {
 
 export async function completeLogin(): Promise<User> {
   return userManager().signinRedirectCallback()
+}
+
+// signinSilent attempts a background token renewal via the Dex session.
+export async function signinSilent(): Promise<User | null> {
+  return userManager().signinSilent()
+}
+
+// completeSilent finishes the silent renew inside the hidden iframe.
+export async function completeSilent(): Promise<void> {
+  await userManager().signinSilentCallback()
+}
+
+export function events() {
+  return userManager().events
 }
 
 export async function logout(): Promise<void> {

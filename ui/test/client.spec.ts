@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi, afterEach } from 'vitest'
 import { __setConfig } from '@/config'
-import { request, setTokenProvider, ApiError } from '@/api/client'
+import { request, setTokenProvider, setUnauthorizedHandler, ApiError } from '@/api/client'
 
 describe('api client', () => {
   beforeEach(() => {
@@ -46,5 +46,14 @@ describe('api client', () => {
       status: 403,
       message: 'forbidden: nope',
     })
+  })
+
+  it('invokes the unauthorized handler on 401', async () => {
+    const onUnauthorized = vi.fn()
+    setUnauthorizedHandler(onUnauthorized)
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('{}', { status: 401 })))
+    await expect(request('/x')).rejects.toMatchObject({ status: 401 })
+    expect(onUnauthorized).toHaveBeenCalledOnce()
+    setUnauthorizedHandler(() => {})
   })
 })

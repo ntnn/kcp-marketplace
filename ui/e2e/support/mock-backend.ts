@@ -20,6 +20,8 @@ export interface MockOptions {
   workspaces?: string[]
   listError?: boolean
   auth?: boolean
+  // authExpired seeds an already-expired session.
+  authExpired?: boolean
 }
 
 function json(route: Route, body: unknown, status = 200): Promise<void> {
@@ -37,17 +39,17 @@ export async function installMock(page: Page, opts: MockOptions = {}): Promise<v
   // Authenticate by seeding the oidc-client-ts user in localStorage.
   if (opts.auth ?? true) {
     await page.addInitScript(
-      ([issuer, client, email]) => {
+      ([issuer, client, email, expired]) => {
         const user = {
           id_token: `h.${btoa(JSON.stringify({ sub: 's', email }))}.s`,
           access_token: 'a',
           token_type: 'Bearer',
           profile: { sub: 's', email },
-          expires_at: Math.floor(Date.now() / 1000) + 3600,
+          expires_at: Math.floor(Date.now() / 1000) + (expired ? -60 : 3600),
         }
         localStorage.setItem(`oidc.user:${issuer}:${client}`, JSON.stringify(user))
       },
-      [ISSUER, CLIENT, USER_EMAIL] as const,
+      [ISSUER, CLIENT, USER_EMAIL, !!opts.authExpired] as const,
     )
   }
 

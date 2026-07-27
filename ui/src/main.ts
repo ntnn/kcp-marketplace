@@ -3,7 +3,7 @@ import { createPinia } from 'pinia'
 import App from './App.vue'
 import { router } from './router'
 import { loadConfig } from './config'
-import { setTokenProvider } from './api/client'
+import { setTokenProvider, setUnauthorizedHandler } from './api/client'
 import { useAuthStore } from './stores/auth'
 import './style.css'
 
@@ -14,9 +14,12 @@ async function bootstrap(): Promise<void> {
   const pinia = createPinia()
   app.use(pinia)
 
-  // Wire the API bearer token to the auth store, then restore any session.
+  // Wire the API bearer token + 401 handling to the auth store, subscribe to
+  // renewal events, then restore any session.
   const auth = useAuthStore(pinia)
   setTokenProvider(() => auth.token)
+  setUnauthorizedHandler(() => void auth.handleUnauthorized())
+  auth.initEvents()
   await auth.restore()
 
   app.use(router)

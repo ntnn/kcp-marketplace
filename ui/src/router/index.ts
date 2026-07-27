@@ -16,6 +16,12 @@ const routes: RouteRecordRaw[] = [
     meta: { public: true },
   },
   {
+    path: '/silent',
+    name: 'silent',
+    component: () => import('@/views/Silent.vue'),
+    meta: { public: true },
+  },
+  {
     path: '/workspaces',
     name: 'workspaces',
     component: () => import('@/views/WorkspacePicker.vue'),

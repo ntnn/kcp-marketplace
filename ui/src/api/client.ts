@@ -8,6 +8,14 @@ export function setTokenProvider(fn: () => string | null): void {
   tokenProvider = fn
 }
 
+// Unauthorized handler is injected at app start; called on any 401 so the auth
+// store can silently renew or re-login.
+let unauthorizedHandler: () => void = () => {}
+
+export function setUnauthorizedHandler(fn: () => void): void {
+  unauthorizedHandler = fn
+}
+
 export class ApiError extends Error {
   status: number
   constructor(status: number, message: string) {
@@ -33,6 +41,7 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
   const res = await fetch(`${base}${path}`, { ...init, headers })
   const text = await res.text()
   if (!res.ok) {
+    if (res.status === 401) unauthorizedHandler()
     throw new ApiError(res.status, extractMessage(text) || `${res.status} ${res.statusText}`)
   }
   return (text ? JSON.parse(text) : undefined) as T
@@ -49,6 +58,7 @@ export async function requestRaw(path: string, accept = 'application/yaml'): Pro
   const res = await fetch(`${base}${path}`, { headers })
   const text = await res.text()
   if (!res.ok) {
+    if (res.status === 401) unauthorizedHandler()
     throw new ApiError(res.status, extractMessage(text) || `${res.status} ${res.statusText}`)
   }
   return text
