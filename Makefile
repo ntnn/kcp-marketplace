@@ -111,6 +111,20 @@ docker-push: ## Push both production images.
 	docker push $(VWS_IMG)
 	docker push $(UI_IMG)
 
+.PHONY: ocm-build
+ocm-build: ## Build the OCM component version into ./transport-archive.
+	VERSION=$(VERSION) COMMIT=$(COMMIT) ocm add cv -c component-constructor.yaml -r ./transport-archive
+
+.PHONY: ocm-transfer
+ocm-transfer: ## Transfer the OCM component version from ./transport-archive to upstream
+	ocm get cv --output json ./transport-archive// \
+		| yq '.[] | .component.name + ":" + .component.version' \
+		| while read descriptor; do \
+			$(OCM) transfer cv --recursive \
+				./transport-archive//$$descriptor \
+				ghcr.io/ntnn/kcp-marketplace; \
+	done
+
 .PHONY: up
 up: ## Stand up the full kind stack for hands-on testing.
 	hack/local-up.sh

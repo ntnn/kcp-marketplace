@@ -1,0 +1,29 @@
+# yaml-language-server: $schema=https://ocm.software/main/schemas/bindings/go/constructor/schema-2020-12.json
+components:
+- name: github.com/ntnn/kcp-marketplace
+  version: ${VERSION}
+  provider:
+    name: ntnn
+  sources:
+  - name: source
+    type: git
+    version: ${VERSION}
+    access:
+      type: gitHub/v1
+      repoUrl: github.com/ntnn/kcp-marketplace
+      commit: ${COMMIT}
+  resources:
+  - name: marketplace-vws
+    type: ociImage
+    version: ${VERSION}
+    relation: local
+    access:
+      type: OCIImage/v1
+      imageReference: ghcr.io/ntnn/kcp-marketplace/marketplace-vws:${VERSION}
+  - name: marketplace-ui
+    type: ociImage
+    version: ${VERSION}
+    relation: local
+    access:
+      type: OCIImage/v1
+      imageReference: ghcr.io/ntnn/kcp-marketplace/ui:${VERSION}

@@ -7,6 +7,9 @@
 # local kcp state
 .kcp/
 
+# ocm build output
+/transport-archive/
+
 # ui
 ui/node_modules/
 ui/dist/
