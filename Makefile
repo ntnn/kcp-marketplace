@@ -41,7 +41,7 @@ build: ## Compile binaries into bin/.
 
 .PHONY: test
 test: ## Unit tests, no cluster.
-	@set -e; for m in $(MODULES); do (cd $$m && $(GO) test ./...); done
+	@set -e; for m in $(MODULES); do (cd $$m && $(GO) test -race ./...); done
 
 .PHONY: test-e2e
 test-e2e: $(KCP_BINARIES) ## Integration tests against in-process sharded kcp (CI gate).
@@ -50,7 +50,7 @@ test-e2e: $(KCP_BINARIES) ## Integration tests against in-process sharded kcp (C
 	KCP_ASSET_KCP_FRONT_PROXY=$(KCP_ASSETS_DIR)/kcp-front-proxy \
 	KCP_ASSET_CACHE_SERVER=$(KCP_ASSETS_DIR)/cache-server \
 	NO_GORUN=1 \
-	$(GO) test -tags=e2e ./test/e2e/...
+	$(GO) test -race -tags=e2e ./test/e2e/...
 
 .PHONY: tools
 tools: $(GOLANGCI_LINT) $(CONTROLLER_GEN) $(KCP_BINARIES) ## Pull all pinned tool artefacts via mindl.
