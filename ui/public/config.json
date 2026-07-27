@@ -1,0 +1,6 @@
+{
+  "issuer": "https://dex.127.0.0.1.nip.io:8443",
+  "clientId": "kcp-marketplace-ui",
+  "scope": "openid profile email groups offline_access",
+  "apiBase": ""
+}
