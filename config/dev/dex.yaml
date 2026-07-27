@@ -1,0 +1,126 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: dex
+  namespace: kcp
+spec:
+  secretName: dex-tls
+  dnsNames:
+    - dex.127.0.0.1.nip.io
+  issuerRef:
+    name: selfsigned
+    kind: Issuer
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dex
+  namespace: kcp
+data:
+  config.yaml: |
+    issuer: https://dex.127.0.0.1.nip.io:8443
+    storage:
+      type: memory
+    web:
+      https: 0.0.0.0:5556
+      tlsCert: /etc/dex/tls/tls.crt
+      tlsKey: /etc/dex/tls/tls.key
+      allowedOrigins:
+        - http://localhost:5173
+        - http://127.0.0.1:5173
+    oauth2:
+      skipApprovalScreen: true
+    staticClients:
+      - id: kcp-marketplace-ui
+        name: kcp marketplace UI
+        public: true
+        redirectURIs:
+          - http://localhost:5173/callback
+          - http://127.0.0.1:5173/callback
+    enablePasswordDB: true
+    staticPasswords:
+      # password: "password" for all demo users
+      - email: admin@example.com
+        hash: "$2b$10$htkhDcvXGN00Qmse9Ms.Rub7cMLzqCcKR4e2AdI8jsQj9iAvorrS."
+        username: admin
+        userID: "08a8684b-db88-4b73-90a9-3cd1661f5466"
+      - email: alice@example.com
+        hash: "$2b$10$htkhDcvXGN00Qmse9Ms.Rub7cMLzqCcKR4e2AdI8jsQj9iAvorrS."
+        username: alice
+        userID: "1b5c2d3e-4f60-4a71-8b92-a1c2d3e4f501"
+      - email: bob@example.com
+        hash: "$2b$10$htkhDcvXGN00Qmse9Ms.Rub7cMLzqCcKR4e2AdI8jsQj9iAvorrS."
+        username: bob
+        userID: "2c6d3e4f-5061-4b82-9ca3-b2d3e4f50612"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dex
+  namespace: kcp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dex
+  template:
+    metadata:
+      labels:
+        app: dex
+    spec:
+      containers:
+        - name: dex
+          image: ghcr.io/dexidp/dex:v2.41.1
+          command: ["/usr/local/bin/dex", "serve", "/etc/dex/cfg/config.yaml"]
+          ports:
+            - name: https
+              containerPort: 5556
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 5556
+              scheme: HTTPS
+            initialDelaySeconds: 3
+          volumeMounts:
+            - name: config
+              mountPath: /etc/dex/cfg
+              readOnly: true
+            - name: tls
+              mountPath: /etc/dex/tls
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: dex
+        - name: tls
+          secret:
+            secretName: dex-tls
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dex
+  namespace: kcp
+spec:
+  selector:
+    app: dex
+  ports:
+    - name: https
+      port: 5556
+      targetPort: 5556
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TLSRoute
+metadata:
+  name: dex
+  namespace: kcp
+spec:
+  parentRefs:
+    - name: eg
+      namespace: envoy-gateway-system
+  hostnames:
+    - dex.127.0.0.1.nip.io
+  rules:
+    - backendRefs:
+        - name: dex
+          port: 5556

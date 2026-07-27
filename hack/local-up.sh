@@ -45,10 +45,13 @@ helm upgrade --install envoy oci://registry-1.docker.io/envoyproxy/gateway-helm 
 	--version v1.7.0 --namespace envoy-gateway-system --create-namespace --wait --timeout 5m
 kubectl apply -f "${OP}/gateway.yaml"
 
-echo ">>> [4/8] kcp-operator + issuer + etcd"
+echo ">>> [4/8] kcp-operator + issuer + etcd + dex"
 kubectl apply -k "${OP}/kcp-operator"
 kubectl -n kcp-operator-system rollout status deploy/kcp-operator-controller-manager --timeout=180s
 kubectl apply -f "${OP}/issuer.yaml" -f "${OP}/etcd.yaml"
+# Dex (OIDC) + its TLS cert; the front-proxy mounts dex-tls (ca.crt) to trust the
+# issuer, so create it before the FrontProxy.
+kubectl apply -f config/dev/dex.yaml
 
 echo ">>> [5/8] RootShard + theseus Shard + FrontProxy + routes + Kubeconfig"
 kubectl apply -f "${OP}/rootshard.yaml"
@@ -60,6 +63,7 @@ kubectl apply -f "${OP}/shard-theseus.yaml" -f "${OP}/frontproxy.yaml"
 wait_deploy "${NS}" root-kcp
 wait_deploy "${NS}" theseus-shard-kcp
 wait_deploy "${NS}" frontproxy-front-proxy
+wait_deploy "${NS}" dex
 
 echo ">>> [6/8] build vws image + load into kind"
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/marketplace-vws ./cmd/marketplace-vws
@@ -83,17 +87,44 @@ kubectl -n "${NS}" wait kubeconfig/frontproxy --for=condition=Available --timeou
 kubectl -n "${NS}" get secret kcp-frontproxy-kubeconfig -o jsonpath='{.data.kubeconfig}' | base64 -d > "${KUBECONFIG_OUT}"
 kubectl --kubeconfig "${KUBECONFIG_OUT}" config use-context base >/dev/null
 
+# Seed demo workspaces, APIExports and per-user RBAC so the marketplace's
+# per-user filtering is visible in the SPA. See hack/dev-seed.sh for the layout.
+echo ">>> seeding dev workspaces / APIExports / grants"
+KUBECONFIG_OUT="${KUBECONFIG_OUT}" ./hack/dev-seed.sh
+
 cat <<EOF
 
-Stack is up (kcp-operator, 2 shards + front-proxy via envoy gateway).
+Stack is up (kcp-operator, 2 shards + front-proxy via envoy gateway, Dex OIDC).
 
   front-proxy:   https://kcp.127.0.0.1.nip.io:8443
   root shard:    https://root.kcp.127.0.0.1.nip.io:8443
   theseus shard: https://theseus.kcp.127.0.0.1.nip.io:8443
+  dex (OIDC):    https://dex.127.0.0.1.nip.io:8443
 
   export KUBECONFIG=${KUBECONFIG_OUT}
   kubectl get --raw '/services/marketplace/apis/marketplace.kcp.io/v1alpha1/accessibleworkspaces' | jq
   kubectl get --raw '/services/marketplace/apis/marketplace.kcp.io/v1alpha1/bindableapiexports' | jq
+
+Demo users (all password "password") and what the marketplace shows each:
+  admin@example.com  workspaces: demo, alpha   bindable: widgets.example.io (+ public)
+  bob@example.com    workspaces: alpha         bindable: widgets.example.io (+ public)
+  alice@example.com  workspaces: beta          bindable: gadgets.example.io (+ public)
+
+SPA (dev): the front-proxy serves OIDC-authenticated requests and CORS for the
+Vite origin.
+
+  cd ui
+  npm install
+  VITE_API_PROXY=https://kcp.127.0.0.1.nip.io:8443 npm run dev
+  # then open http://localhost:5173 and sign in as admin@example.com / password
+
+IMPORTANT: the dev certs are self-signed, and browsers hard-fail the OIDC
+discovery fetch() to an untrusted endpoint (it shows up as a CORS / "Failed to
+fetch" error on the sign-in button). Before signing in, open each of these once
+and click through the certificate warning:
+
+  https://dex.127.0.0.1.nip.io:8443
+  https://kcp.127.0.0.1.nip.io:8443
 
 Tear down with: make down
 EOF

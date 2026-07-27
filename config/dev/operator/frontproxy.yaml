@@ -10,6 +10,22 @@ spec:
   external:
     hostname: kcp.127.0.0.1.nip.io
     port: 8443
+  auth:
+    # OIDC token validation also validates ServiceAccount JWTs, so the operator
+    # requires ServiceAccount auth to be enabled alongside it.
+    serviceAccount:
+      enabled: true
+    oidc:
+      issuerURL: https://dex.127.0.0.1.nip.io:8443
+      clientID: kcp-marketplace-ui
+      usernameClaim: email
+      groupsClaim: groups
+      caFileRef:
+        name: dex-tls
+        key: ca.crt
+  extraArgs:
+    # Allow the Vite dev server origin to call the front-proxy (SPA → API).
+    - '--cors-allowed-origins=^https?://(localhost|127\.0\.0\.1):5173$'
   additionalPathMappings:
     - path: /services/marketplace/
       backend: https://marketplace-vws.kcp.svc:6444
@@ -26,6 +42,7 @@ spec:
                 - kcp.127.0.0.1.nip.io
                 - root.kcp.127.0.0.1.nip.io
                 - theseus.kcp.127.0.0.1.nip.io
+                - dex.127.0.0.1.nip.io
   certificateTemplates:
     server:
       spec:
