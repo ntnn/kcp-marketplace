@@ -10,6 +10,9 @@
 # ui
 ui/node_modules/
 ui/dist/
+ui/playwright-report/
+ui/test-results/
+ui/.playwright/
 
 # editor / os
 *.swp

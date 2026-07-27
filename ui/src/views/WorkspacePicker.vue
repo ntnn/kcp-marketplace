@@ -35,11 +35,11 @@ function browse(ws: AccessibleWorkspace) {
         <tr><th>Path</th><th>Cluster</th><th></th></tr>
       </thead>
       <tbody>
-        <tr v-for="ws in items" :key="ws.cluster">
-          <td>{{ ws.path }}</td>
+        <tr v-for="ws in items" :key="ws.cluster" data-testid="ws-row">
+          <td data-testid="ws-path">{{ ws.path }}</td>
           <td><code>{{ ws.cluster }}</code></td>
           <td class="actions">
-            <button type="button" @click="browse(ws)">Browse</button>
+            <button type="button" data-testid="ws-browse" @click="browse(ws)">Browse</button>
           </td>
         </tr>
       </tbody>

@@ -33,11 +33,11 @@ async function signIn() {
   <section class="login">
     <h1>kcp marketplace</h1>
     <p>Sign in to browse the workspaces you can access and bind APIExports.</p>
-    <button type="button" @click="signIn">Sign in with Dex</button>
+    <button type="button" data-testid="signin" @click="signIn">Sign in with Dex</button>
 
     <p v-if="error" class="error">{{ error }}</p>
 
-    <div v-if="certIssue" class="cert">
+    <div v-if="certIssue" class="cert" data-testid="cert-hint">
       <p class="error">Could not reach the identity provider.</p>
       <p>
         In local dev the OIDC provider uses a self-signed certificate. Open

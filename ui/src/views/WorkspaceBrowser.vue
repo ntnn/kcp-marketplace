@@ -187,7 +187,7 @@ watch(() => props.path, loadResources)
     <header class="row">
       <h2>Browse <code>{{ path }}</code></h2>
       <div class="tools">
-        <button type="button" @click="openBind">Bind API</button>
+        <button type="button" data-testid="bind-api" @click="openBind">Bind API</button>
         <router-link :to="{ name: 'workspaces' }">← Workspaces</router-link>
       </div>
     </header>
@@ -202,6 +202,8 @@ watch(() => props.path, loadResources)
           <li v-for="r in resources" :key="r.groupVersion + '/' + r.name">
             <button
               type="button"
+              data-testid="resource-item"
+              :data-name="r.name"
               :class="{ active: selected?.name === r.name && selected?.groupVersion === r.groupVersion }"
               @click="pick(r)"
             >
@@ -230,6 +232,7 @@ watch(() => props.path, loadResources)
               v-for="(o, i) in objects"
               :key="(o.metadata?.name ?? '') + i"
               class="clickable"
+              data-testid="object-row"
               @click="showYaml(o)"
             >
               <td>{{ o.metadata?.name }}</td>
@@ -243,7 +246,7 @@ watch(() => props.path, loadResources)
 
     <!-- Bind panel -->
     <div v-if="showBind" class="overlay" @click.self="showBind = false">
-      <div class="panel">
+      <div class="panel" data-testid="bind-panel">
         <header class="row">
           <h3>Bind an API into <code>{{ path }}</code></h3>
           <button type="button" @click="showBind = false">Close</button>
@@ -252,8 +255,8 @@ watch(() => props.path, loadResources)
         <p v-if="canBind === false" class="warn">
           You do not have permission to create APIBindings here.
         </p>
-        <p v-if="bindMsg" class="ok">{{ bindMsg }}</p>
-        <p v-if="bindError" class="error">{{ bindError }}</p>
+        <p v-if="bindMsg" class="ok" data-testid="bind-msg">{{ bindMsg }}</p>
+        <p v-if="bindError" class="error" data-testid="bind-error">{{ bindError }}</p>
 
         <p v-if="exportsLoading">Loading exports…</p>
         <p v-else-if="bindable.length === 0">No bindable APIExports available.</p>
@@ -262,7 +265,12 @@ watch(() => props.path, loadResources)
             <tr><th>Export</th><th>Path</th><th>Resources</th><th></th></tr>
           </thead>
           <tbody>
-            <tr v-for="exp in bindable" :key="exp.path + '/' + exp.exportName">
+            <tr
+              v-for="exp in bindable"
+              :key="exp.path + '/' + exp.exportName"
+              data-testid="bind-row"
+              :data-export="exp.exportName"
+            >
               <td>{{ exp.exportName }}</td>
               <td><code>{{ exp.path }}</code></td>
               <td>
@@ -275,6 +283,7 @@ watch(() => props.path, loadResources)
                   v-if="boundName(exp)"
                   type="button"
                   class="unbind"
+                  data-testid="unbind-btn"
                   :disabled="canBind === false || binding === exp.exportName"
                   @click="unbind(exp)"
                 >
@@ -283,6 +292,7 @@ watch(() => props.path, loadResources)
                 <button
                   v-else
                   type="button"
+                  data-testid="bind-btn"
                   :disabled="canBind === false || binding === exp.exportName"
                   @click="bind(exp)"
                 >
@@ -297,13 +307,13 @@ watch(() => props.path, loadResources)
 
     <!-- YAML viewer -->
     <div v-if="yaml" class="overlay" @click.self="yaml = null">
-      <div class="panel">
+      <div class="panel" data-testid="yaml-panel">
         <header class="row">
           <h3><code>{{ yaml.title }}</code></h3>
           <button type="button" @click="yaml = null">Close</button>
         </header>
         <p v-if="yamlLoading">Loading…</p>
-        <pre v-else class="yaml">{{ yaml.text }}</pre>
+        <pre v-else class="yaml" data-testid="yaml">{{ yaml.text }}</pre>
       </div>
     </div>
   </section>

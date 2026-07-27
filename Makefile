@@ -85,6 +85,10 @@ manifests: ## Regenerate committed manifests into config/.
 ui: ## Build the SPA.
 	cd ui && npm ci && npm run build
 
+.PHONY: test-ui-e2e
+test-ui-e2e: ## Run playwright tests against dev.
+	cd ui && npm ci && npm run test:e2e:live
+
 .PHONY: up
 up: ## Stand up the full kind stack for hands-on testing.
 	hack/local-up.sh
