@@ -56,8 +56,8 @@ ${subs}roleRef:
 EOF
 }
 
-export_api() { # workspace, group, plural, singular, Kind, exportName
-	local wsname="$1" group="$2" plural="$3" singular="$4" kind="$5" exp="$6"
+export_api() { # workspace, group, plural, singular, Kind, exportName, [claimResource]
+	local wsname="$1" group="$2" plural="$3" singular="$4" kind="$5" exp="$6" claim="${7:-}"
 	# APIResourceSchemas are immutable, so create only if absent.
 	if ! ws "${wsname}" get apiresourceschema "v1.${plural}.${group}" >/dev/null 2>&1; then
 		ws "${wsname}" create -f - <<EOF >/dev/null
@@ -87,6 +87,16 @@ spec:
                 type: string
 EOF
 	fi
+	local claims=""
+	if [ -n "${claim}" ]; then
+		# Request a permission claim on a core resource (group ""); the SPA
+		# accepts it automatically when binding.
+		claims="
+  permissionClaims:
+    - group: \"\"
+      resource: ${claim}
+      verbs: [\"get\", \"list\", \"watch\"]"
+	fi
 	ws "${wsname}" apply -f - <<EOF >/dev/null
 apiVersion: apis.kcp.io/v1alpha2
 kind: APIExport
@@ -98,7 +108,7 @@ spec:
       group: ${group}
       schema: v1.${plural}.${group}
       storage:
-        crd: {}
+        crd: {}${claims}
 EOF
 }
 
@@ -108,7 +118,7 @@ create_ws alpha
 create_ws beta
 
 echo ">>> APIExports (widgets in alpha, gadgets in beta)"
-export_api alpha example.io widgets widget Widget widgets.example.io
+export_api alpha example.io widgets widget Widget widgets.example.io configmaps
 export_api beta example.io gadgets gadget Gadget gadgets.example.io
 
 echo ">>> per-user access/bind grants"
