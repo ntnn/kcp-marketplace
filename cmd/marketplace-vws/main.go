@@ -53,11 +53,13 @@ func run() error {
 	fs := pflag.NewFlagSet("marketplace-vws", pflag.ExitOnError)
 	o.AddFlags(fs)
 	fs.StringVar(&shardKubeconfig, "shard-kubeconfig", "",
-		"Kubeconfig with a privileged identity able to list Shards and wildcard-list across each shard's /clusters/*.")
+		"Kubeconfig with a privileged identity able to list Shards and wildcard-list across each shard's /clusters/*. "+
+			"If empty, a static placeholder datasource is used.")
 	fs.StringVar(&gatewayURL, "gateway-url", "",
 		"In-cluster address of the TLS-passthrough gateway used to reach shards, e.g. "+
 			"https://eg-nodeport.envoy-gateway-system.svc.cluster.local:8443. "+
-			"If empty, a static placeholder datasource is used.")
+			"If empty, each shard is dialed at its own spec.baseURL, which is required "+
+			"when shards are spread over several clusters.")
 	if err := fs.Parse(os.Args[1:]); err != nil {
 		return err
 	}
@@ -108,9 +110,9 @@ func run() error {
 	return server.PrepareRun().RunWithContext(ctx)
 }
 
-// buildDatasource returns the shard manager, its read side, and the per-user SAR checker when a gateway is configured.
+// buildDatasource returns the shard manager, its read side, and the per-user SAR checker when a shard kubeconfig is configured.
 func buildDatasource(kubeconfig, gatewayURL string) (*datasource.Manager, datasource.Interface, sar.Interface, error) {
-	if gatewayURL == "" {
+	if kubeconfig == "" {
 		return nil, datasource.Static{
 			Ws: []datasource.Workspace{
 				{Path: "root", Cluster: "root"},
@@ -133,29 +135,36 @@ func buildDatasource(kubeconfig, gatewayURL string) (*datasource.Manager, dataso
 		return nil, nil, nil, fmt.Errorf("loading shard kubeconfig: %w", err)
 	}
 
-	// The kubeconfig server is the external front-proxy hostname, unreachable
-	// in-cluster; dial the gateway and present the front-proxy hostname as SNI so
-	// the TLS-passthrough gateway routes there and the serving cert verifies.
-	fpURL, err := url.Parse(base.Host)
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("parsing front-proxy URL %q: %w", base.Host, err)
-	}
-
-	// rootCfg targets /clusters/root through the gateway to watch Shards.
+	// rootCfg targets /clusters/root to watch Shards; sarCfg targets the bare
+	// origin and selects the logical cluster per call via Cluster(path).
 	rootCfg := restclient.CopyConfig(base)
-	rootCfg.Host = strings.TrimRight(gatewayURL, "/") + "/clusters/root"
-	rootCfg.ServerName = fpURL.Hostname()
+	sarCfg := restclient.CopyConfig(base)
+
+	if gatewayURL != "" {
+		// The kubeconfig server is the external front-proxy hostname, unreachable
+		// in-cluster; dial the gateway and present the front-proxy hostname as SNI so
+		// the TLS-passthrough gateway routes there and the serving cert verifies.
+		fpURL, err := url.Parse(base.Host)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("parsing front-proxy URL %q: %w", base.Host, err)
+		}
+		origin := strings.TrimRight(gatewayURL, "/")
+		rootCfg.Host = origin + "/clusters/root"
+		rootCfg.ServerName = fpURL.Hostname()
+		sarCfg.Host = origin
+		sarCfg.ServerName = fpURL.Hostname()
+	} else {
+		// Without a gateway the kubeconfig host is reachable as it stands and each
+		// shard is dialed at its own spec.baseURL, which is the only thing that
+		// works when the shards live on different clusters.
+		rootCfg.Host = strings.TrimRight(base.Host, "/") + "/clusters/root"
+	}
 
 	mgr, err := datasource.NewManager(rootCfg, base, gatewayURL)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
-	// sarCfg targets the bare front-proxy origin; the SAR checker selects the
-	// logical cluster per call via Cluster(path), which the front-proxy routes.
-	sarCfg := restclient.CopyConfig(base)
-	sarCfg.Host = strings.TrimRight(gatewayURL, "/")
-	sarCfg.ServerName = fpURL.Hostname()
 	kubeCluster, err := kcpkubernetesclientset.NewForConfig(sarCfg)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("building SAR client: %w", err)
