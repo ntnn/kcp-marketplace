@@ -120,7 +120,7 @@ ocm-transfer: ## Transfer the OCM component version from ./transport-archive to 
 	ocm get cv --output json ./transport-archive// \
 		| yq '.[] | .component.name + ":" + .component.version' \
 		| while read descriptor; do \
-			$(OCM) transfer cv --recursive \
+			ocm transfer cv --recursive \
 				./transport-archive//$$descriptor \
 				ghcr.io/ntnn/kcp-marketplace; \
 	done

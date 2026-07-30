@@ -1,0 +1,85 @@
+# The marketplace virtual workspace server, as a Platform Mesh module component.
+#
+# Interpolated with ${ ... } CEL by the deployer before apply. It is placed
+# per-front-proxy and carries a mapping, so the deployer aggregates
+# /services/marketplace/ into the front proxy's additionalPathMappings and mints
+# the serving certificate this Deployment mounts.
+#
+# It has to live in the front proxy's own namespace: the requestheader CA it
+# verifies the front proxy's client certificate against is a kcp-operator secret
+# that only exists there.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ${module + "-vws"}
+  namespace: ${targetNamespace}
+  labels:
+    app: ${module + "-vws"}
+spec:
+  replicas: ${values.replicas}
+  selector:
+    matchLabels:
+      app: ${module + "-vws"}
+  template:
+    metadata:
+      labels:
+        app: ${module + "-vws"}
+    spec:
+      containers:
+        - name: vws
+          image: ${values.vwsImage}
+          imagePullPolicy: IfNotPresent
+          args:
+            - --secure-port=6444
+            - --bind-address=0.0.0.0
+            - --tls-cert-file=/etc/serving/tls.crt
+            - --tls-private-key-file=/etc/serving/tls.key
+            - --requestheader-client-ca-file=/etc/requestheader-ca/tls.crt
+            - --shard-kubeconfig=/etc/shard-kubeconfig/kubeconfig
+            # No --gateway-url on purpose: the shards live on separate clusters,
+            # so each one is dialed at its own spec.baseURL.
+          ports:
+            - name: https
+              containerPort: 6444
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 6444
+              scheme: HTTPS
+            initialDelaySeconds: 3
+          volumeMounts:
+            - name: serving
+              mountPath: /etc/serving
+              readOnly: true
+            - name: requestheader-ca
+              mountPath: /etc/requestheader-ca
+              readOnly: true
+            - name: shard-kubeconfig
+              mountPath: /etc/shard-kubeconfig
+              readOnly: true
+      volumes:
+        - name: serving
+          secret:
+            # Minted by the deployer for the mapped component.
+            secretName: ${module + "-vws-serving"}
+        - name: requestheader-ca
+          secret:
+            secretName: ${values.requestHeaderCASecret}
+        - name: shard-kubeconfig
+          secret:
+            secretName: ${values.shardKubeconfigSecret}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ${module + "-vws"}
+  namespace: ${targetNamespace}
+  labels:
+    app: ${module + "-vws"}
+spec:
+  selector:
+    app: ${module + "-vws"}
+  ports:
+    - name: https
+      port: 6444
+      targetPort: https

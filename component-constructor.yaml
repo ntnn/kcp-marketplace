@@ -27,3 +27,21 @@ components:
     access:
       type: OCIImage/v1
       imageReference: ghcr.io/ntnn/kcp-marketplace/ui:${VERSION}
+  # Deployment manifests for the Platform Mesh module. Embedded by value rather
+  # than referenced, because the deployer fetches them as local blobs.
+  - name: vws-manifests
+    type: platformMesh.io/manifests
+    version: ${VERSION}
+    relation: local
+    input:
+      type: File/v1
+      path: config/module/vws.yaml
+      mediaType: application/x-yaml
+  - name: ui-manifests
+    type: platformMesh.io/manifests
+    version: ${VERSION}
+    relation: local
+    input:
+      type: File/v1
+      path: config/module/ui.yaml
+      mediaType: application/x-yaml

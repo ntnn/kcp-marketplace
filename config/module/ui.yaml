@@ -1,0 +1,173 @@
+# The marketplace SPA, as a Platform Mesh module component.
+#
+# The SPA is served from its own hostname rather than under a front proxy path
+# mapping: its router, its /config.json fetch and its OIDC redirect URIs are all
+# root-absolute, so it cannot live under a subpath. It therefore calls the front
+# proxy cross-origin, which is why config.json sets apiBase and the front proxy
+# allows this origin via CORS.
+#
+# nginx needs to serve TLS because the gateway listener is TLS passthrough. The
+# published image serves plain HTTP on 8080, so its config is replaced here
+# rather than the image being rebuilt.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: ${module + "-ui-ca"}
+  namespace: ${targetNamespace}
+spec:
+  isCA: true
+  commonName: ${module + "-ui-ca"}
+  secretName: ${module + "-ui-ca-tls"}
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: kcp
+    kind: ClusterIssuer
+    group: cert-manager.io
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: ${module + "-ui-ca"}
+  namespace: ${targetNamespace}
+spec:
+  ca:
+    secretName: ${module + "-ui-ca-tls"}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: ${module + "-ui"}
+  namespace: ${targetNamespace}
+spec:
+  secretName: ${module + "-ui-tls"}
+  commonName: ${values.uiHost}
+  dnsNames:
+    - ${values.uiHost}
+  usages:
+    - server auth
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: ${module + "-ui-ca"}
+    kind: Issuer
+    group: cert-manager.io
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ${module + "-ui-config"}
+  namespace: ${targetNamespace}
+data:
+  default.conf: |
+    server {
+        listen 8443 ssl;
+        server_name _;
+
+        ssl_certificate     /etc/nginx/tls/tls.crt;
+        ssl_certificate_key /etc/nginx/tls/tls.key;
+
+        root /usr/share/nginx/html;
+        index index.html;
+
+        # Runtime config must never be cached so a mounted override takes effect.
+        location = /config.json {
+            add_header Cache-Control "no-store";
+        }
+
+        # SPA history-mode fallback.
+        location / {
+            try_files $uri $uri/ /index.html;
+        }
+    }
+  config.json: |
+    {
+      "issuer": "${values.issuerURL}",
+      "clientId": "${values.clientID}",
+      "scope": "openid profile email groups offline_access",
+      "apiBase": "${values.frontProxyURL}"
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ${module + "-ui"}
+  namespace: ${targetNamespace}
+  labels:
+    app: ${module + "-ui"}
+spec:
+  replicas: ${values.replicas}
+  selector:
+    matchLabels:
+      app: ${module + "-ui"}
+  template:
+    metadata:
+      labels:
+        app: ${module + "-ui"}
+    spec:
+      containers:
+        - name: ui
+          image: ${values.uiImage}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: https
+              containerPort: 8443
+          readinessProbe:
+            httpGet:
+              path: /index.html
+              port: 8443
+              scheme: HTTPS
+            initialDelaySeconds: 3
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx/conf.d/default.conf
+              subPath: default.conf
+              readOnly: true
+            - name: nginx-config
+              mountPath: /usr/share/nginx/html/config.json
+              subPath: config.json
+              readOnly: true
+            - name: tls
+              mountPath: /etc/nginx/tls
+              readOnly: true
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: ${module + "-ui-config"}
+        - name: tls
+          secret:
+            secretName: ${module + "-ui-tls"}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ${module + "-ui"}
+  namespace: ${targetNamespace}
+  labels:
+    app: ${module + "-ui"}
+spec:
+  selector:
+    app: ${module + "-ui"}
+  ports:
+    - name: https
+      port: 8443
+      targetPort: https
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TLSRoute
+metadata:
+  name: ${module + "-ui"}
+  namespace: ${targetNamespace}
+spec:
+  parentRefs:
+    - name: ${values.gatewayName}
+      namespace: ${values.gatewayNamespace}
+      sectionName: passthrough
+  hostnames:
+    - ${values.uiHost}
+  rules:
+    - backendRefs:
+        - name: ${module + "-ui"}
+          port: 8443
