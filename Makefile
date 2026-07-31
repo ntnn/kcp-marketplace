@@ -14,6 +14,11 @@ REGISTRY ?= ghcr.io/ntnn/kcp-marketplace
 VWS_IMG ?= $(REGISTRY)/marketplace-vws:$(VERSION)
 UI_IMG ?= $(REGISTRY)/ui:$(VERSION)
 
+# Manifest lists are built with podman: the docker CLI has no equivalent of
+# --manifest, and buildx is not part of a stock installation.
+PODMAN ?= podman
+PLATFORMS ?= linux/amd64,linux/arm64
+
 GOLANGCI_LINT_VERSION ?= 2.12.2
 GOLANGCI_LINT := $(TOOLS_DIR)/golangci-lint-$(GOLANGCI_LINT_VERSION)/golangci-lint
 
@@ -95,21 +100,18 @@ ui: ## Build the SPA.
 test-ui-e2e: ## Run playwright tests against dev.
 	cd ui && npm ci && npm run test:e2e:live
 
-.PHONY: docker-build-vws
-docker-build-vws: ## Build the marketplace-vws image.
-	docker build -f cmd/marketplace-vws/Dockerfile --build-arg VERSION=$(VERSION) -t $(VWS_IMG) .
+.PHONY: images
+images: ## Build both production images as multi-arch manifest lists.
+	$(PODMAN) manifest rm $(VWS_IMG) 2>/dev/null || true
+	$(PODMAN) build --platform $(PLATFORMS) --manifest $(VWS_IMG) \
+		-f cmd/marketplace-vws/Dockerfile --build-arg VERSION=$(VERSION) .
+	$(PODMAN) manifest rm $(UI_IMG) 2>/dev/null || true
+	$(PODMAN) build --platform $(PLATFORMS) --manifest $(UI_IMG) ui
 
-.PHONY: docker-build-ui
-docker-build-ui: ## Build the ui image.
-	docker build -t $(UI_IMG) ui
-
-.PHONY: docker-build
-docker-build: docker-build-vws docker-build-ui ## Build both production images.
-
-.PHONY: docker-push
-docker-push: ## Push both production images.
-	docker push $(VWS_IMG)
-	docker push $(UI_IMG)
+.PHONY: images-push
+images-push: ## Push both manifest lists, every architecture.
+	$(PODMAN) manifest push --all $(VWS_IMG) docker://$(VWS_IMG)
+	$(PODMAN) manifest push --all $(UI_IMG) docker://$(UI_IMG)
 
 .PHONY: ocm-build
 ocm-build: ## Build the OCM component version into ./transport-archive.

@@ -1,4 +1,6 @@
-FROM node:22-alpine AS builder
+# The bundle is architecture independent, so it is built once on the native
+# platform and only the nginx layer varies per architecture.
+FROM --platform=$BUILDPLATFORM node:22-alpine AS builder
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
