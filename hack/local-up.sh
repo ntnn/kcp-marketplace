@@ -67,7 +67,9 @@ wait_deploy "${NS}" frontproxy-front-proxy
 wait_deploy "${NS}" dex
 
 echo ">>> [6/8] build vws image + load into kind"
-CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/marketplace-vws ./cmd/marketplace-vws
+# The kind node runs the host's architecture, so build for it rather than a
+# fixed one.
+CGO_ENABLED=0 GOOS=linux GOARCH="$(go env GOARCH)" go build -o bin/marketplace-vws ./cmd/marketplace-vws
 docker build -f config/dev/Dockerfile -t "${IMG}" .
 kind load docker-image "${IMG}" --name "${CLUSTER}"
 
