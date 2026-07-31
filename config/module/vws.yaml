@@ -2,12 +2,9 @@
 #
 # Interpolated with ${ ... } CEL by the deployer before apply. It is placed
 # per-front-proxy and carries a mapping, so the deployer aggregates
-# /services/marketplace/ into the front proxy's additionalPathMappings and mints
-# the serving certificate this Deployment mounts.
-#
-# It has to live in the front proxy's own namespace: the requestheader CA it
-# verifies the front proxy's client certificate against is a kcp-operator secret
-# that only exists there.
+# /services/marketplace/ into the front proxy's additionalPathMappings, mints
+# the serving certificate this Deployment mounts, and copies over the
+# requestheader CA it verifies the front proxy's client certificate against.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -27,7 +24,7 @@ spec:
     spec:
       containers:
         - name: vws
-          image: ${values.vwsImage}
+          image: ${ocm.resources.byName("marketplace-vws").access.imageReference}
           imagePullPolicy: IfNotPresent
           args:
             - --secure-port=6444
@@ -64,7 +61,9 @@ spec:
             secretName: ${module + "-vws-serving"}
         - name: requestheader-ca
           secret:
-            secretName: ${values.requestHeaderCASecret}
+            # Copied to this cluster by the deployer, because the kcp-operator
+            # secret it comes from is named after the root shard.
+            secretName: ${module + "-" + component + "-requestheader-ca"}
         - name: shard-kubeconfig
           secret:
             secretName: ${values.shardKubeconfigSecret}
